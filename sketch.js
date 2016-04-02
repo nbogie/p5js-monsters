@@ -1,6 +1,6 @@
 "use strict";
 var bgColor = 0;
-var showDebug = true;
+var showDebug = false;
 var keepLooping = true;
 var blendModeNum = 1;
 var monsters = [];
@@ -658,8 +658,12 @@ function mousePressed() {
   if (typeof maybe != 'undefined') {
     maybe.nextState();
   } else {
-    dropFoodAt(newPos(mouseX, mouseY));
+    dropFoodAt(mousePosAsInts());
   }
+}
+
+function mousePosAsInts(){
+  return newPos(floor(mouseX), floor(mouseY));
 }
 
 function mouseReleased() {}
@@ -758,7 +762,7 @@ function keyTyped() {
   } else if (key === "h") {
     makeAllHungryBy(50);
   } else if (key === "w") {
-    activateFoodWand(newPos(mouseX, mouseY));
+    activateFoodWand(mousePosAsInts());
   } else if (key === "p") {
     togglePause();
   } else if (key === "d") {
