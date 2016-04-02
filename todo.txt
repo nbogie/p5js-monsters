@@ -1,0 +1,9 @@
+todo.txt
+=========
+
+
+Done:
+A hungry monster should retarget for available food if: 
+* original food target removed before he gets to it
+* original food is somehow out of reach
+* no original food target, but some later becomes available.
