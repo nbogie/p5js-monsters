@@ -457,65 +457,59 @@ var Monster = function(config) {
 }; //FUNCTION-END: Monster
 
 
-  Monster.prototype.say = function(m) {
-    console.log(m);
-  };
+Monster.prototype.say = function(m) {
+  console.log(m);
+};
 
-  Monster.prototype.emote = function() {
-    this.say("emoting");
-  };
+Monster.prototype.emote = function() {
+  this.say("emoting");
+};
 
-  function toggleDebug() {
-    showDebug = !showDebug;
+function toggleDebug() {
+  showDebug = !showDebug;
+}
+
+function togglePause() {
+  keepLooping = !keepLooping;
+  if (keepLooping) {
+    loop();
+  } else {
+    noLoop();
+  }
+}
+
+function mousePressed() {
+  var maybe = monsters.find(function(m) {
+    return dist(m.getPos().x, m.getPos().y, mouseX, mouseY) < 50;
+  });
+  if (typeof maybe != 'undefined') {
+    maybe.nextState();
   }
 
-  function togglePause() {
-    keepLooping = !keepLooping;
-    if (keepLooping) {
-      loop();
-    } else {
-      noLoop();
-    }
-  }
+}
 
-  function mousePressed() {
-    var maybe = monsters.find(function(m) {
-      return dist(m.getPos().x, m.getPos().y, mouseX, mouseY) < 50;
-    });
-    if (typeof maybe != 'undefined') {
-      maybe.nextState();
-    }
+function mouseReleased() {}
 
-  }
+function pickIx(arr) {
+  return floor(random() * arr.length);
+}
 
-  function mouseReleased() {}
+function pick(arr) {
+  return arr[floor(random() * arr.length)];
+}
 
-  function pickIx(arr) {
-    return floor(random() * arr.length);
-  }
-
-  function pick(arr) {
-    return arr[floor(random() * arr.length)];
-  }
-
-  function pickOther(arr, notThisOne) {
+function pickOther(arr, notThisOne) {
   //TODO: handle case when array ONLY contains references to the one we don't want.  (Infinite loop.)
-  ix = arr.indexOf(notThisOne);
+  var ix = arr.indexOf(notThisOne);
   if (ix === -1) {
     return arr[floor(random() * arr.length)];
   } else {
-    chosenIx = floor(random() * arr.length);
+    var chosenIx = floor(random() * arr.length);
     while (chosenIx === ix) {
       chosenIx = floor(random() * arr.length);
     }
     return arr[chosenIx];
   }
-}
-
-function toCartesian(rad, ang) {
-  var x = round(rad * cos(ang));
-  var y = round(rad * sin(ang));
-  return newPos(x, y);
 }
 
 function randColor() {
@@ -542,7 +536,7 @@ function randBetween(a, b) {
 }
 
 function numberKeyTyped(n){
-
+  console.log("number typed: " + n);
 }
 
 function keyTyped() {
