@@ -7,33 +7,76 @@ var monsters = [];
 var foodPositions = [];
 var items = [];
 var player = [];
+var screenLogList = [];
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   frameRate(30);
-  restart();
+  restart({});
 }
 
 function centre() {
   return newPos(width / 2, height / 2);
 }
+function screenLog(msg, p){
+  screenLogList.push({text: msg, whenToDie: millis() + 4000, pos: p});
+}
+function drawScreenLog(){
+  var nextList = [];
+  for (var sli in screenLogList){
+    var item = screenLogList[sli];
+    textSize(20);
+    fill(255);
+    text(item.text, item.pos.x+30, item.pos.y+30);
 
-function restart() {
+    text(item.text, width - 300, 100 + sli*20);
+    if (millis() < item.whenToDie){
+      nextList.push(item);
+    }
+  }
+  screenLogList = nextList;
+}
+function dropFoodAt(p){
+  foodPositions.push(p);
+}
+function dropFoodsAt(p, n, rad){
+  for (var i = 0; i < n ; i++) {
+    foodPositions.push(randPosAround(p, rad));
+  }
+}
+
+function spawnFood(amountOfFoodToDrop){
+  foodPositions = [];
+  var foodHoardPosns = []
+  for(var x = 0; x < 2; x++){
+    foodHoardPosns.push(randPosAwayFromWallsBy(150));
+  }
+
+  for (var hp of foodHoardPosns){
+    dropFoodsAt(hp, amountOfFoodToDrop / foodHoardPosns.length, 70);
+  }
+}
+
+function restart(config) {
+  var amountOfMonsters = config.monsters || 20;
+  var amountOfFoodToDrop = config.food || 30;
+
   bgColor = color(0);
   background(bgColor);
+  screenLogList = [];
+
   player = new Player({
     pos: centre()
   });
 
-  for (var i = 0; i < 2; i++) {
-    foodPositions.push(randPos());
-  }
-
+  spawnFood(amountOfFoodToDrop);
+  items = [];
   for (var k = 0; k < 10; k++) {
     items.push(randItem());
   }
 
-  for (var j = 0; j < 10; j++) {
+  monsters = [];
+  for (var j = 0; j < amountOfMonsters; j++) {
 
     var monster = new Monster({
       pos: randPos(),
@@ -46,19 +89,34 @@ function restart() {
     monsters.push(monster);
   }
 }
+function activateFoodWand(p){
+  dropFoodsAt(p, randIntBetween(7,40), 40);
+}
 
 function randItem() {
-  var item = pick([{
+  var item = pick([
+  {
     title: 'torch',
+    color: randColor(),
     interactSelf: function(otherMonster) {},
     interactOther: function(otherMonster) {}
+
   }, {
     title: 'ball',
+    color: randColor(),
     interactOther: function(otherMonster) {
       console.log("playing ball with other monster");
     }
   }, {
+    title: 'foodWand',
+    color: color('purple'),
+    interactSelf: function() {
+      console.log("food wand zapped!");
+
+    }
+  }, {
     title: 'hat',
+    color: randColor(),
     interactSelf: function(otherMonster) {},
     interactOther: function(otherMonster) {}
   }, ]);
@@ -80,7 +138,8 @@ var State = {
   CURIOUS: 4,
   HUNGRY: 5,
   SCARED: 6,
-  LAST: 6
+  DRUNK: 7,
+  LAST: 7
 };
 
 function foodAt(p) {
@@ -136,8 +195,11 @@ var Monster = function(config) {
   var stateName = "unset state name";
   var tiredness = randBetween(0, 71);
   var boredom = randBetween(0, 60);
-
+  var hunger = randBetween(0,50);
+  
   var inventory = [];
+  var that = this;
+
   this.getNickname = function() {
     return nickname;
   };
@@ -166,8 +228,9 @@ var Monster = function(config) {
 
   
   var distToTarget = function() {
-    return dist(target.x, target.y, pos.x, pos.y);
+    return dist(target.pos.x, target.pos.y, pos.x, pos.y);
   };
+
   var movementSpeed = function() {
     return 1;
   };
@@ -183,26 +246,41 @@ var Monster = function(config) {
   };
 
 
-  
+  var meLog = function(msg){
+    screenLog(that.getNickname() + ": " + msg, pos);
+  }
 
   var changeState = function(next) {
     state = next;
     switch (state) {
       case State.SLEEPING:
+      meLog("sleeping");
       break;
       case State.ANGRY:
+      meLog("grr");
       break;
       case State.HAPPY:
+      meLog("happy");
+
       break;
       case State.CURIOUS:
       target = {
         pos: randPos(),
         type: TType.PLACE
       };
+      meLog("curious");
+
       break;
       case State.HUNGRY:
+      meLog("becomes hungry");
+      chooseAFoodTarget();
       break;
       case State.SCARED:
+      meLog("scared!");
+      break;
+      case State.DRUNK:
+      growTiredBy(-40);
+      meLog("drunnnk!");
       break;
       default:
       console.log("ERROR: default switch case reached");
@@ -215,6 +293,16 @@ var Monster = function(config) {
       return -6;
     };
     moveTowardsTarget();
+  };
+  var spin = function() {
+    movementSpeed = function() {
+      return 4;
+    };
+    //var drunkStartPos = pos;
+    var rad = 30;
+    var phase = (that.getNickname().charCodeAt(0)*10) + frameCount*4;
+    pos.x = width/2 + rad*sin(radians(phase));
+    pos.y = height/2 + rad*cos(radians(phase));
   };
 
   var chaseTarget = function() {
@@ -234,7 +322,6 @@ var Monster = function(config) {
     pos.y += vel.y;
     pos.x = constrain(pos.x, 20, width - 20);
     pos.y = constrain(pos.y, 20, height - 20);
-
   };
 
   
@@ -242,7 +329,8 @@ var Monster = function(config) {
 
   var movementFunction = idle;
 
-  var targetFood = function() {
+  var chooseAFoodTarget = function() {
+
     if (foodPositions.length > 0) {
       target = {
         pos: pick(foodPositions),
@@ -250,14 +338,37 @@ var Monster = function(config) {
       };
     }
   };
-
+  var FoodEffect = {
+    NORMAL: 1,
+    ENDRUNKEN: 2,
+    SICKEN: 3
+  }
   var seekFood = function() {
-    var possibleFood = foodAt(pos);
-    if (possibleFood) {
-      console.log("eating food");
-      growTiredBy(30);
-      removeFood(possibleFood);
-      state = State.HAPPY;
+    var foodHere = foodAt(pos);
+    if (foodHere) {
+      removeFood(foodHere);
+      hunger = 0;
+      meLog("ate food so hunger now: "+ hunger);
+      var effect = pickProb([[FoodEffect.NORMAL, 95], 
+        [FoodEffect.ENDRUNKEN, 5], 
+        [FoodEffect.SICKEN, 0]]);
+      switch (effect) {
+        case FoodEffect.NORMAL:
+        growTiredBy(20);
+        changeState(State.HAPPY);
+        break;
+        case FoodEffect.ENDRUNKEN:
+        meLog("DRUNK!")
+        changeState(State.DRUNK);
+        break;
+        case FoodEffect.SICKEN:
+        meLog("sickened - unimpl")
+        changeState(State.HAPPY);
+        break;
+        default: 
+        console.log("ERROR: default in switch case - food effect");
+        break;
+      }
     } else {
       moveTowardsTarget();
     }
@@ -281,7 +392,7 @@ var Monster = function(config) {
       if (distToTarget() < 10) {
         return 0;
       } else {
-        return 2.5;
+        return 6;
       }
     };
     if (false) { //if we find an item...
@@ -290,9 +401,9 @@ var Monster = function(config) {
       state = State.HAPPY;
     }
 
-    if (dist(target.x, target.y, pos.x, pos.y) < 10) {
+    if (distToTarget() < 10) {
       target = {
-        pos: newPos(randBetween(0, width), randBetween(0, height)),
+        pos: randPos(),
         type: TType.PLACE
       };
     }
@@ -313,6 +424,13 @@ var Monster = function(config) {
     }
   };
 
+  this.growHungryBy = function(amt) {
+    hunger += amt;
+    if (hunger < 0) {
+      hunger = 0;
+    }
+  };
+
   this.update = function() {
     switch (state) {
       case State.SLEEPING:
@@ -320,8 +438,13 @@ var Monster = function(config) {
       stateName = "Sleeping";
       movementFunction = idle;
       growTiredBy(-0.4);
+      that.growHungryBy(0.01);
+      
       if (tiredness <= 0) {
         changeState(State.HAPPY);
+      }
+      if (hunger > 80) {
+        changeState(State.HUNGRY);
       }
       break;
       case State.ANGRY:
@@ -330,6 +453,11 @@ var Monster = function(config) {
       movementFunction = chaseTarget;
       boredom = 0;
       growTiredBy(1);
+      that.growHungryBy(0.09);
+      if (hunger > 90) {
+        changeState(State.HUNGRY);
+      }
+      
       if (tiredness > 100) {
         changeState(State.SLEEPING);
       }
@@ -339,6 +467,7 @@ var Monster = function(config) {
       stateName = "Happy";
       growTiredBy(0.1);
       growBoredBy(0.2);
+      that.growHungryBy(0.03);
       fill(color('pink'));
       if (tiredness > 60) {
         changeState(State.SLEEPING);
@@ -346,12 +475,16 @@ var Monster = function(config) {
       if (boredom > 100) {
         changeState(State.CURIOUS);
       }
+      if (hunger > 50) {
+        changeState(State.HUNGRY);
+      }
 
       break;
       case State.CURIOUS:
       stateName = "curious";
-      growTiredBy(0.2);
+      growTiredBy(0.02);
       growBoredBy(-0.2);
+      that.growHungryBy(0.07);
       fill(color('orange'));
       movementFunction = explore;
       if (tiredness > 70) {
@@ -360,23 +493,32 @@ var Monster = function(config) {
       if (boredom < 5) {
         changeState(State.HAPPY);
       }
+      if (hunger > 60) {
+        changeState(State.HUNGRY);
+      }
 
       break;
       case State.HUNGRY:
       stateName = "Hungry";
       movementFunction = seekFood;
-      growTiredBy(0.1);
-      growBoredBy(-0.1);
-      fill(color(100, 100, 100, 200));
-      if (tiredness > 80) {
-        changeState(State.SLEEPING);
+      
+      if (!target || target.type !== TType.FOOD || !foodAt(target.pos)){
+        chooseAFoodTarget();
       }
 
+      growTiredBy(0.1);
+      growBoredBy(-0.1);
+      that.growHungryBy(0.05);
+      fill(color(150));
+      if (hunger < 60 && tiredness > 80) {
+        changeState(State.SLEEPING);
+      }
       break;
       case State.SCARED:
       stateName = "Scared";
       growTiredBy(1.5);
       growBoredBy(-0.4);
+      that.growHungryBy(0.1);
       fill(color('white'));
       target = {
         pos: player.pos,
@@ -386,19 +528,42 @@ var Monster = function(config) {
       if (tiredness > 130) {
         changeState(State.SLEEPING);
       }
-
+      if (hunger > 90) {
+        changeState(State.HUNGRY);
+      }
       break;
+
+
+      case State.DRUNK:
+      stateName = "Drunk";
+      growTiredBy(1);
+      growBoredBy(-3);
+      that.growHungryBy(0.2);
+      fill(color('yellow'));
+      movementFunction = spin;
+      if (tiredness > 80) {
+        changeState(State.SLEEPING);
+      }
+      if (hunger > 80) {
+        changeState(State.HUNGRY);
+      }
+      break;
+
+
       default:
       console.log("ERROR: default switch case reached");
     }
     var drawPowerBar = function(v, maxV, x, y, w, h, c1, c2) {
-      noStroke();
-      fill(lerpColor(c1, c2, map(v, 0, maxV, 0, 1)));
+      var c = lerpColor(c1, c2, map(v, 0, maxV, 0, 1));
       var yVal = map(v, 0, maxV, 0, h);
+      noStroke();
+      fill(c);
+      strokeWeight(1);
       rect(x, y, w, yVal);
+      textSize(8);
+      text(round(v), x,y);
     };
-    var that = this;
-
+    
     var drawTarget = function() {
       var c = color('purple');
       switch (target.type) {
@@ -424,6 +589,7 @@ var Monster = function(config) {
       fill(c);
       line(p.x - 10, p.y, p.x + 10, p.y);
       line(p.x, p.y - 10, p.x, p.y + 10);
+      noStroke();
       text(target.type + " for " + that.getNickname(), p.x, p.y);
     };
 
@@ -444,10 +610,15 @@ var Monster = function(config) {
         pos.x - w / 2 - 10, pos.y - h / 2,
         2, 20, color(50, 50, 255), color(150, 150, 255));
 
+      drawPowerBar(hunger, 100,
+        pos.x - w / 2 - 15, pos.y - h / 2,
+        2, 20, color('green'), color('red'));
+
+      noStroke();
       fill(0);
       textSize(20);
       text(this.getNickname(), pos.x, pos.y);
-      textSize(10);
+      textSize(15);
       fill(255);
       text(stateName, pos.x + 20, pos.y);
 
@@ -486,10 +657,33 @@ function mousePressed() {
   });
   if (typeof maybe != 'undefined') {
     maybe.nextState();
+  } else {
+    dropFoodAt(newPos(mouseX, mouseY));
   }
 }
 
 function mouseReleased() {}
+
+function pickProb(arr){
+  var sum = arr.reduce(function(a, b) {
+    return a + b[1];
+  }, 0);
+  arr = arr.map(function(v){ return [v[0], v[1]/sum]; });
+
+  var fArr = [];
+  var rt = 0;
+
+  for(var pair of arr){
+    rt += pair[1];
+    fArr.push([pair[0], rt]);
+  }
+  var rnd = random();
+  for(var resAndThresh of fArr){
+    if (rnd < resAndThresh[1]){
+      return resAndThresh[0];
+    }
+  }
+}
 
 function pickIx(arr) {
   return floor(random() * arr.length);
@@ -536,8 +730,15 @@ function randBetween(a, b) {
   return random(b - a) + a;
 }
 
+function makeAllHungryBy(n) {
+  for(var m of monsters){
+    m.growHungryBy(n);
+  }
+}
+
 function numberKeyTyped(n){
   console.log("number typed: " + n);
+  restart({monsters: n});
 }
 
 function keyTyped() {
@@ -554,6 +755,10 @@ function keyTyped() {
     player.moveUp();
   } else if (key === "g") {
     player.moveDown();
+  } else if (key === "h") {
+    makeAllHungryBy(50);
+  } else if (key === "w") {
+    activateFoodWand(newPos(mouseX, mouseY));
   } else if (key === "p") {
     togglePause();
   } else if (key === "d") {
@@ -621,8 +826,33 @@ function newPos(x, y) {
   };
 }
 
+function randPosAwayFromWallsBy(margin) {
+  return newPos(
+    randIntBetween(margin, width - margin), 
+    randIntBetween(margin, height - margin));
+}
+
 function randPos() {
-  return newPos(randIntBetween(0, width - 30), randIntBetween(0, height - 30));
+  return randPosAwayFromWallsBy(50);
+}
+
+function randPosAround(ctr, rad){  
+  var p = toCartesian(random(rad), random(radians(360)));
+  var x = ctr.x + p.x;
+  var y = ctr.y + p.y;
+  return newPos(x, y);
+}
+
+function toCartesian(rad, ang) {
+  var x = round(rad * cos(ang));
+  var y = round(rad * sin(ang));
+  return newPos(x, y);
+}
+
+function drawFood(p){
+  noStroke();
+  fill([color(255, 0, 0, 100), color(0,255,0,100)][(p.x+p.y) % 2]);
+  ellipse(p.x, p.y, 20, 20);
 }
 
 function draw() {
@@ -631,15 +861,16 @@ function draw() {
   stroke(100);
 
   for (var foodPos of foodPositions) {
-    noStroke();
-    fill([color('red'), color('green')][foodPos.x % 2]);
-    ellipse(foodPos.x, foodPos.y, 20, 20);
+    drawFood(foodPos);
   }
 
   for (var item of items) {
     noStroke();
+    strokeWeight(5);
+    stroke(item.color);
     fill([color('blue'), color('white'), color('gray'), color('orange')][item.pos.x % 4]);
-    rect(item.pos.x, item.pos.y, 20, 20);
+    rect(item.pos.x, item.pos.y, 10, 20);
+    //rect(item.pos.x, item.pos.y, 10, 20);
   }
 
   drawPlayer();
@@ -656,12 +887,16 @@ function draw() {
     stroke(255);
     text("player: " + round(player.pos.x) + ", " + round(player.pos.y),
       600, windowHeight - 40);
+
+    textSize(20);
+    drawScreenLog();    
   }
 }
 
 function drawPlayer() {
   var x = player.pos.x;
   var y = player.pos.y;
+  noStroke();
   fill(color('orange'));
   ellipse(x, y, 30, 30);
 }
