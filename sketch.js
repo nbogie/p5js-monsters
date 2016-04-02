@@ -430,9 +430,11 @@ var Monster = function(config) {
     this.draw = function() {
       var w = 30;
       var h = 30;
-      rect(pos.x - w / 2, pos.y - h / 2, w, h);
+
       noStroke();
+      rect(pos.x - w / 2, pos.y - h / 2, w, h);
       fill(255);
+      rect(pos.x-1, pos.y-1, 2, 2);
       
       drawPowerBar(boredom, 100,
         pos.x - w / 2 - 5, pos.y - h / 2,
@@ -485,7 +487,6 @@ function mousePressed() {
   if (typeof maybe != 'undefined') {
     maybe.nextState();
   }
-
 }
 
 function mouseReleased() {}
@@ -630,11 +631,13 @@ function draw() {
   stroke(100);
 
   for (var foodPos of foodPositions) {
+    noStroke();
     fill([color('red'), color('green')][foodPos.x % 2]);
     ellipse(foodPos.x, foodPos.y, 20, 20);
   }
 
   for (var item of items) {
+    noStroke();
     fill([color('blue'), color('white'), color('gray'), color('orange')][item.pos.x % 4]);
     rect(item.pos.x, item.pos.y, 20, 20);
   }
