@@ -243,26 +243,30 @@ function randItem() {
   var item = pick([
   {
     title: 'torch',
-    color: randColor(),
+    color1: randColor(),
+    color2: randColor(),
     interactSelf: function(otherMonster) {},
     interactOther: function(otherMonster) {}
 
   }, {
     title: 'ball',
-    color: randColor(),
+    color1: randColor(),
+    color2: randColor(),
     interactOther: function(otherMonster) {
       console.log("playing ball with other monster");
     }
   }, {
     title: 'foodWand',
-    color: color('purple'),
+    color1: color('purple'),
+    color2: color('yellow'),
     interactSelf: function() {
       console.log("food wand zapped!");
 
     }
   }, {
     title: 'hat',
-    color: randColor(),
+    color1: randColor(),
+    color2: randColor(),
     interactSelf: function(otherMonster) {},
     interactOther: function(otherMonster) {}
   }, ]);
@@ -869,21 +873,26 @@ function pickOther(arr, notThisOne) {
 }
 
 function randColor() {
-  if (random() > 0.5) {
-    return pick([color('orange'),
-      color('yellow'),
-      color('red'),
-      color('white'),
-      color('blue'),
-      color('pink'),
-      color('purple'),
-      ]);
+  var randomColorLibraryAvailable = true;
+  if (randomColorLibraryAvailable){
+  return randomColor(); // uses randomColor library.
   } else {
-    return color(
-      random(255),
-      random(255),
-      random(255),
-      random(255));
+    if (random() > 0.5) {
+      return pick([color('orange'),
+        color('yellow'),
+        color('red'),
+        color('white'),
+        color('blue'),
+        color('pink'),
+        color('purple'),
+        ]);
+    } else {
+      return color(
+        random(255),
+        random(255),
+        random(255),
+        random(255));
+    }
   }
 }
 
@@ -1028,9 +1037,9 @@ function draw() {
   for (var item of items) {
     noStroke();
     strokeWeight(5);
-    stroke(item.color);
-    fill([color('blue'), color('white'), color('gray'), color('orange')][item.pos.x % 4]);
-    rect(item.pos.x, item.pos.y, 10, 20);
+    stroke(item.color1);
+    fill(item.color2);
+    rect(item.pos.x, item.pos.y, 20, 40);
     //rect(item.pos.x, item.pos.y, 10, 20);
   }
 
