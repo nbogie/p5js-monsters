@@ -1,11 +1,13 @@
 "use strict";
+var faces = [];
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  restart();
 }
 
 function restart() {
-  drawFaces();
-  
+  setupFaces();
 }
 
 function mousePressed() {
@@ -13,22 +15,35 @@ function mousePressed() {
 }
 
 function draw(){
+  background(255);
   drawFaces();
 }
 
 function drawFaces(){
-  background(102);
-  noLoop();
-  var faces = [];
+  for(var face of faces){
+    push();
+    scale(face.sf);
+    translate(face.pos.x, face.pos.y);
+    fill(255);
+    face.maker();
+    pop();
+    face.pos.x = face.pos.x + 1;
+
+  }
+
+}
+
+function setupFaces(){
+  faces = [];
   var attempts = 0;
-  while(faces.length < 30 && attempts < 10000){
+  while(faces.length < 50 && attempts < 50000){
     attempts += 1;
 
     var x = random()*width;
     var y = random()*height;
     var sf = random()+ 0.5;
 
-    var candidateFace = {pos: {x: x, y: y}, size: 200*sf};
+    var candidateFace = {pos: {x: x, y: y}, size: 200*sf, sf: sf};
     
     var overlap = function(f){
       var c = candidateFace;
@@ -40,19 +55,19 @@ function drawFaces(){
     if (faces.some(overlap)){
       //skip this one - overlapping...
     }else {
-      push();
-      scale(sf);
-      translate(x, y);
-      drawFace();
-      pop();
+      candidateFace.maker = makeFaceMaker();
       faces.push(candidateFace);
     }
   }
-
   console.log(faces);
 }
-function drawFace() {
-  makeFaceMaker()();
+function mouseTargetVector(){
+  var orig = {x: mouseX - width/2, 
+              y: mouseY - height/2};
+  var m = mag(orig.x, orig.y);
+  orig.x = orig.x/m;
+  orig.y = orig.y/m;
+  return orig;
 }
 
 function makeFaceMaker() {
@@ -64,11 +79,11 @@ function makeFaceMaker() {
     push();
     rectMode(CENTER);
     rect(0, 0, 170, 200); 
-    eyeMaker();
+    eyeMaker(mouseTargetVector());
     cheekMaker();
     mouthMaker();
     pop();    
-  }
+  };
 }
 
 function makeMouthMaker(){
@@ -77,7 +92,7 @@ function makeMouthMaker(){
       push();
       translate(0,40);
       fill(color(240));
-      stroke(color(100))
+      stroke(color(100));
       translate(60,0);      
       for(var i=0; i<5; i++){
         translate(-20,0);      
@@ -114,12 +129,12 @@ function makeCheekMaker(){
 }
 
 function makeEyeMaker(){
-  
+
   var cEyeGreen = color(150,255,150);
   var cEyeBlue = color(150,200, 255);
   var cEyeBrown = color(120,70, 70);
 
-  function drawSquareEye(){
+  function drawSquareEye(c, targetVector){
     fill(255);
     stroke(0);
     rect(0,0,50, 40);
@@ -127,39 +142,42 @@ function makeEyeMaker(){
     fill(color(150,200,255));
     rect(0, 0, 40, 30);       
   }
-  function drawOvalEye(c){
+  function drawOvalEye(c, targetVector){
     fill(255);
     stroke(0);
     ellipse(0,0,30, 20);
     noStroke();
     fill(c);
+    translate(targetVector.x*7,0);
     ellipse(0, 0, 20, 20);       
     fill(color(0));
     ellipse(0, 0, 10,10);       
   }
-  function drawMangaEye(c){
+  function drawMangaEye(c, targetVector){
+    
     fill(255);
     stroke(0);
     ellipse(0,0,50, 70);
     noStroke();
     fill(c);
-    translate(-10,0);
+    translate(targetVector.x*10,targetVector.y*10);
     ellipse(0, 0, 40, 40);
     fill(color(0));
     ellipse(0, 0, 20,20);       
   }
 
+  var eyeColor = pick([cEyeGreen, cEyeBlue, cEyeBrown]);
+  var eyeMaker = pick([drawMangaEye, drawOvalEye, drawSquareEye]);
   
-    return pick([
-    function(){
+  return pick([
+    function(targetVector){      
       push();
-      var eyeColor = color('orange');  
       translate(0, -30);
-      fill(eyeColor);
+      fill(color('orange'));
       rect(0, 0, 130, 60); 
       pop();
     },
-    function() {
+    function(targetVector) {
       push();
       translate(0, -30);
       fill('black');
@@ -169,46 +187,19 @@ function makeEyeMaker(){
       line(-15,-30,55,30);
       pop();
     },
-    function() {
+    function(targetVector) {
       push();
       translate(0, -40);
       push();
       translate(-30, 0);
-      drawSquareEye();
+      eyeMaker(eyeColor, targetVector);
       pop();
       push();
       translate(40, 0);
-      drawSquareEye();
-      pop();
-      pop();
-    },
-    function() {
-      push();
-      translate(0, -40);
-      push();
-      translate(-30, 0);
-      drawOvalEye(cEyeGreen);
-      pop();
-      push();
-      translate(40, 0);
-      drawOvalEye(cEyeGreen);
-      pop();
-      pop();
-    },
-    function() {
-      push();
-      translate(0, -40);
-      push();
-      translate(-30, 0);
-      drawMangaEye(cEyeBlue);
-      pop();
-      push();
-      translate(40, 0);
-      drawMangaEye(cEyeBlue);
+      eyeMaker(eyeColor, targetVector);
       pop();
       pop();
     }
-
     ]);
 }
 
