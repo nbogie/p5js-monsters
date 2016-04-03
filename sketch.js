@@ -1031,6 +1031,20 @@ function drawFood(food){
   fill(food.c);
   ellipse(food.pos.x, food.pos.y, 10, 10);
 }
+function drawItem(item){
+    noStroke();
+    strokeWeight(3);
+    stroke(255);
+    fill(item.color2);
+    rectMode(CENTER);
+    rect(item.pos.x, item.pos.y, 16, 30);
+    stroke(color('red'));
+    line(item.pos.x, item.pos.y-15, item.pos.x, item.pos.y+15);
+    line(item.pos.x-8, item.pos.y, item.pos.x+8, item.pos.y);
+}
+
+
+
 
 function draw() {
   background(bgColor);
@@ -1042,12 +1056,7 @@ function draw() {
   }
 
   for (var item of items) {
-    noStroke();
-    strokeWeight(5);
-    stroke(item.color1);
-    fill(item.color2);
-    rect(item.pos.x, item.pos.y, 20, 40);
-    //rect(item.pos.x, item.pos.y, 10, 20);
+    drawItem(item);
   }
 
   drawPlayer();
