@@ -182,12 +182,19 @@ function drawScreenLog(){
   }
   screenLogList = nextList;
 }
+function makeFoodAt(p){
+  return {pos: p, 
+          c: pick([
+            randomColor({hue: 'green'}), 
+            randomColor({hue: 'red'}) ])
+          };  
+}
 function dropFoodAt(p){
-  foodPositions.push(p);
+  foodPositions.push(makeFoodAt(p));
 }
 function dropFoodsAt(p, n, rad){
   for (var i = 0; i < n ; i++) {
-    foodPositions.push(randPosAround(p, rad));
+    foodPositions.push(makeFoodAt(randPosAround(p, rad)));
   }
 }
 
@@ -199,13 +206,13 @@ function spawnFood(amountOfFoodToDrop){
   }
 
   for (var hp of foodHoardPosns){
-    dropFoodsAt(hp, amountOfFoodToDrop / foodHoardPosns.length, 70);
+    dropFoodsAt(hp, floor(amountOfFoodToDrop / foodHoardPosns.length), 70);
   }
 }
 
 function restart(config) {
-  var amountOfMonsters = config.monsters || 20;
-  var amountOfFoodToDrop = config.food || 30;
+  var amountOfMonsters = config.monsters || 5;
+  var amountOfFoodToDrop = config.food || 20;
 
   bgColor = color(30);
   background(bgColor);
@@ -293,8 +300,8 @@ var State = {
 };
 
 function foodAt(p) {
-  var possible = foodPositions.find(function(foodPos) {
-    return (dist(foodPos.x, foodPos.y, p.x, p.y) < 10);
+  var possible = foodPositions.find(function(food) {
+    return (dist(food.pos.x, food.pos.y, p.x, p.y) < 10);
   });
   return possible;
 }
@@ -485,7 +492,7 @@ var Monster = function(config) {
 
     if (foodPositions.length > 0) {
       target = {
-        pos: pick(foodPositions),
+        pos: pick(foodPositions).pos,
         type: TType.FOOD
       };
     }
@@ -1019,10 +1026,10 @@ function toCartesian(rad, ang) {
   return newPos(x, y);
 }
 
-function drawFood(p){
+function drawFood(food){
   noStroke();
-  fill([color(255, 0, 0, 100), color(0,255,0,100)][(p.x+p.y) % 2]);
-  ellipse(p.x, p.y, 20, 20);
+  fill(food.c);
+  ellipse(food.pos.x, food.pos.y, 10, 10);
 }
 
 function draw() {
@@ -1030,8 +1037,8 @@ function draw() {
 
   stroke(100);
 
-  for (var foodPos of foodPositions) {
-    drawFood(foodPos);
+  for (var food of foodPositions) {
+    drawFood(food);
   }
 
   for (var item of items) {
