@@ -383,9 +383,11 @@ var Monster = function(config) {
   this.getNickname = function() {
     return nickname;
   };
-  this.addItem = function(item) {
+  
+  var addItemToInventory = function(item) {
     inventory.push(item);
   };
+
   this.hasItem = function() {
     return inventory.length > 0;
   };
@@ -437,16 +439,20 @@ var Monster = function(config) {
     };
   }
 
-  var randomItemTarget = function(){
-    var item = pick(items);
-    return {
-      pos: item.pos, 
-      type: TType.ITEM
-    };
+  var randomItemTargetIfAvailable = function(){
+    if (items.length > 0){
+      var item = pick(items);
+      return {
+        pos: item.pos, 
+        type: TType.ITEM
+      };
+    } else {
+      return randomPlaceTarget();
+    }
   }
 
   var makeNewRandomExploreTarget = function(){
-    return pick([randomPlaceTarget, randomItemTarget])();
+    return pick([randomPlaceTarget, randomItemTargetIfAvailable])();
   };
 
   var changeState = function(next) {
@@ -584,8 +590,7 @@ var Monster = function(config) {
   };
 
 
-
-  var explore = function() {
+  var exploreFn = function() {
     movementSpeed = function() {
       if (distToTarget() < 10) {
         return 0;
@@ -593,9 +598,14 @@ var Monster = function(config) {
         return 6;
       }
     };
-    if (false) { //if we find an item...
-      console.log("found Item");
-      growBoredBy(-30);
+    var itemMaybe = itemAt(pos);
+    if (itemMaybe) { 
+      //TODO: don't always pick it up
+
+      meLog("found Item: "+ itemMaybe);
+      that.growBoredBy(-30);
+      addItemToInventory(itemMaybe)
+      removeItem(itemMaybe);
       state = State.HAPPY;
     }
 
@@ -612,7 +622,7 @@ var Monster = function(config) {
     }
   };
 
-  var growBoredBy = function(amt) {
+  this.growBoredBy = function(amt) {
     boredom += amt;
     if (boredom < 0) {
       boredom = 0;
@@ -661,7 +671,7 @@ var Monster = function(config) {
       movementFunction = idle;
       stateName = "Happy";
       growTiredBy(0.1);
-      growBoredBy(0.2);
+      that.growBoredBy(0.2);
       that.growHungryBy(0.03);
       faceColor = function() { return color('pink'); } 
       if (tiredness > 60) {
@@ -678,11 +688,11 @@ var Monster = function(config) {
       case State.CURIOUS:
       stateName = "curious";
       growTiredBy(0.02);
-      growBoredBy(-0.2);
+      that.growBoredBy(-0.2);
       that.growHungryBy(0.07);
       faceColor = function() { return color('orange'); } 
       
-      movementFunction = explore;
+      movementFunction = exploreFn;
       if (tiredness > 70) {
         changeState(State.SLEEPING);
       }
@@ -703,7 +713,7 @@ var Monster = function(config) {
       }
 
       growTiredBy(0.1);
-      growBoredBy(-0.1);
+      that.growBoredBy(-0.1);
       that.growHungryBy(0.05);
       faceColor = function() { return color(150); } 
       if (hunger < 60 && tiredness > 80) {
@@ -713,7 +723,7 @@ var Monster = function(config) {
       case State.SCARED:
       stateName = "Scared";
       growTiredBy(1.5);
-      growBoredBy(-0.4);
+      that.growBoredBy(-0.4);
       that.growHungryBy(0.1);
       faceColor = function() { return color(255); } 
       target = {
@@ -733,7 +743,7 @@ var Monster = function(config) {
       case State.DRUNK:
       stateName = "Drunk";
       growTiredBy(1);
-      growBoredBy(-3);
+      that.growBoredBy(-3);
       that.growHungryBy(0.2);
       faceColor = function() { return color('yellow'); } 
       movementFunction = spin;
@@ -950,6 +960,11 @@ function makeAllHungryBy(n) {
     m.growHungryBy(n);
   }
 }
+function makeAllBoredBy(n) {
+  for(var m of monsters){
+    m.growBoredBy(n);
+  }
+}
 
 function numberKeyTyped(n){
   console.log("number typed: " + n);
@@ -972,6 +987,8 @@ function keyTyped() {
     player.moveDown();
   } else if (key === "h") {
     makeAllHungryBy(50);
+  } else if (key === "b") {
+    makeAllBoredBy(50);
   } else if (key === "w") {
     activateFoodWand(mousePosAsInts());
   } else if (key === "p") {
