@@ -51,21 +51,28 @@ function drawFaces(){
 
   console.log(faces);
 }
-
 function drawFace() {
-  push();
-  //translate(width*0.5, height*0.5);
-  rectMode(CENTER);
-  rect(0, 0, 170, 200); 
-  drawEyes();
-  drawCheeks();
-  drawMouth();
-  
-  pop();
+  makeFaceMaker()();
 }
 
-function drawMouth(){
-  drawOneOf([
+function makeFaceMaker() {
+  var eyeMaker =   makeEyeMaker();
+  var cheekMaker = makeCheekMaker();
+  var mouthMaker = makeMouthMaker();
+
+  return function(){
+    push();
+    rectMode(CENTER);
+    rect(0, 0, 170, 200); 
+    eyeMaker();
+    cheekMaker();
+    mouthMaker();
+    pop();    
+  }
+}
+
+function makeMouthMaker(){
+  return pick([
     function(){
       push();
       translate(0,40);
@@ -89,8 +96,8 @@ function drawMouth(){
     ]);
 }
 
-function drawCheeks(){
-  drawOneOf([
+function makeCheekMaker(){
+  return pick([
     function(){
       push();
       noStroke();
@@ -103,16 +110,11 @@ function drawCheeks(){
     },
     function(){
     }
-
     ]);
 }
 
-function drawOneOf(fns){
-  var fn = pick(fns);
-  fn();
-}
-
-function drawEyes(){
+function makeEyeMaker(){
+  
   var cEyeGreen = color(150,255,150);
   var cEyeBlue = color(150,200, 255);
   var cEyeBrown = color(120,70, 70);
@@ -148,7 +150,7 @@ function drawEyes(){
   }
 
   
-  drawOneOf([
+    return pick([
     function(){
       push();
       var eyeColor = color('orange');  
