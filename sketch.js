@@ -167,21 +167,24 @@ function centre() {
 function screenLog(msg, p){
   screenLogList.push({text: msg, whenToDie: millis() + 4000, pos: p});
 }
+
 function drawScreenLog(){
   var nextList = [];
   for (var sli in screenLogList){
-    var item = screenLogList[sli];
+    var logItem = screenLogList[sli];
     textSize(20);
     fill(255);
-    text(item.text, item.pos.x+30, item.pos.y+30);
+    text(logItem.text, logItem.pos.x+30, logItem.pos.y+30);
 
-    text(item.text, width - 300, 100 + sli*20);
-    if (millis() < item.whenToDie){
-      nextList.push(item);
+    text(logItem.text, width - 300, 100 + sli*20);
+    if (millis() < logItem.whenToDie){
+      nextList.push(logItem);
     }
   }
   screenLogList = nextList;
 }
+
+
 function makeFoodAt(p){
   return {pos: p, 
           c: pick([
@@ -285,7 +288,8 @@ var TType = {
   PLACE: 1,
   PLAYER: 2,
   MONSTER: 3,
-  FOOD: 4
+  FOOD: 4,
+  ITEM: 5
 };
 
 var State = {
@@ -300,14 +304,31 @@ var State = {
 };
 
 function foodAt(p) {
-  var possible = foodPositions.find(function(food) {
-    return (dist(food.pos.x, food.pos.y, p.x, p.y) < 10);
+  return thingAt(p, foodPositions);
+}
+
+function itemAt(p) {
+  return thingAt(p, items);
+}
+
+function thingAt(p, list){
+  var possible = list.find(function(thing) {
+    return (dist(thing.pos.x, thing.pos.y, p.x, p.y) < 10);
   });
   return possible;
 }
 
+
 function removeFood(f) {
-  foodPositions.splice(foodPositions.indexOf(f), 1);
+  removeThing(f, foodPositions);
+}
+
+function removeItem(i) {
+  removeThing(i, items);
+}
+
+function removeThing(t, list){
+  list.splice(list.indexOf(t), 1);
 }
 
 var Player = function(config) {
@@ -409,6 +430,25 @@ var Monster = function(config) {
     screenLog(that.getNickname() + ": " + msg, pos);
   }
 
+  var randomPlaceTarget = function(){
+    return {
+      pos: randPos(),
+      type: TType.PLACE
+    };
+  }
+
+  var randomItemTarget = function(){
+    var item = pick(items);
+    return {
+      pos: item.pos, 
+      type: TType.ITEM
+    };
+  }
+
+  var makeNewRandomExploreTarget = function(){
+    return pick([randomPlaceTarget, randomItemTarget])();
+  };
+
   var changeState = function(next) {
     state = next;
     switch (state) {
@@ -423,10 +463,8 @@ var Monster = function(config) {
 
       break;
       case State.CURIOUS:
-      target = {
-        pos: randPos(),
-        type: TType.PLACE
-      };
+      target = makeNewRandomExploreTarget();
+
       meLog("curious");
 
       break;
@@ -562,10 +600,7 @@ var Monster = function(config) {
     }
 
     if (distToTarget() < 10) {
-      target = {
-        pos: randPos(),
-        type: TType.PLACE
-      };
+      target = makeNewRandomExploreTarget();
     }
     moveTowardsTarget();
   };
@@ -740,8 +775,11 @@ var Monster = function(config) {
         case TType.FOOD:
         c = color('green');
         break;
-        default:
+        case TType.ITEM:
         c = color('cyan');
+        break;
+        default:
+        c = color('purple');
         console.log("ERROR: no such TType: " + target.type);
         break;
       }
