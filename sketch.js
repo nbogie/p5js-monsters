@@ -23,10 +23,14 @@ function makeFaceMaker() {
   var cheekMaker = makeCheekMaker();
   var mouthMaker = makeMouthMaker();
 
-  return function(){
+  return function(c){
     push();
     rectMode(CENTER);
+    stroke(0);
+    strokeWeight(5);
+    fill(c);
     rect(0, 0, 170, 200); 
+    noStroke();
     eyeMaker(mouseTargetVector());
     cheekMaker();
     mouthMaker();
@@ -339,6 +343,7 @@ var Monster = function(config) {
   var boredom = randBetween(0, 60);
   var hunger = randBetween(0,50);
   var faceMaker = makeFaceMaker();
+  var faceColor = function() { return color('blue');};
 
   var inventory = [];
   var that = this;
@@ -577,7 +582,7 @@ var Monster = function(config) {
   this.update = function() {
     switch (state) {
       case State.SLEEPING:
-      fill(color(100, 200, 200));
+      faceColor = function() { return color(100, 200, 200); } 
       stateName = "Sleeping";
       movementFunction = idle;
       growTiredBy(-0.4);
@@ -591,7 +596,7 @@ var Monster = function(config) {
       }
       break;
       case State.ANGRY:
-      fill(color('red'));
+      faceColor = function() { return color('red'); } 
       stateName = "Angry";
       movementFunction = chaseTarget;
       boredom = 0;
@@ -611,7 +616,7 @@ var Monster = function(config) {
       growTiredBy(0.1);
       growBoredBy(0.2);
       that.growHungryBy(0.03);
-      fill(color('pink'));
+      faceColor = function() { return color('pink'); } 
       if (tiredness > 60) {
         changeState(State.SLEEPING);
       }
@@ -628,7 +633,8 @@ var Monster = function(config) {
       growTiredBy(0.02);
       growBoredBy(-0.2);
       that.growHungryBy(0.07);
-      fill(color('orange'));
+      faceColor = function() { return color('orange'); } 
+      
       movementFunction = explore;
       if (tiredness > 70) {
         changeState(State.SLEEPING);
@@ -652,7 +658,7 @@ var Monster = function(config) {
       growTiredBy(0.1);
       growBoredBy(-0.1);
       that.growHungryBy(0.05);
-      fill(color(150));
+      faceColor = function() { return color(150); } 
       if (hunger < 60 && tiredness > 80) {
         changeState(State.SLEEPING);
       }
@@ -662,7 +668,7 @@ var Monster = function(config) {
       growTiredBy(1.5);
       growBoredBy(-0.4);
       that.growHungryBy(0.1);
-      fill(color('white'));
+      faceColor = function() { return color(255); } 
       target = {
         pos: player.pos,
         type: TType.PLAYER
@@ -682,7 +688,7 @@ var Monster = function(config) {
       growTiredBy(1);
       growBoredBy(-3);
       that.growHungryBy(0.2);
-      fill(color('yellow'));
+      faceColor = function() { return color('yellow'); } 
       movementFunction = spin;
       if (tiredness > 80) {
         changeState(State.SLEEPING);
@@ -744,7 +750,7 @@ var Monster = function(config) {
       push();
       translate(pos.x, pos.y);
       scale(0.2,0.2);
-      faceMaker();
+      faceMaker(faceColor());
       pop();
 
 
@@ -765,9 +771,9 @@ var Monster = function(config) {
         2, 20, color('green'), color('red'));
 
       noStroke();
-      fill(0);
-      textSize(20);
-      text(this.getNickname(), pos.x, pos.y);
+      fill(255);
+      textSize(15);
+      text(this.getNickname(), pos.x+20, pos.y-20);
       textSize(15);
       fill(255);
       text(stateName, pos.x + 20, pos.y);
