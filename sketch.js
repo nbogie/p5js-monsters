@@ -9,6 +9,148 @@ var items = [];
 var player = [];
 var screenLogList = [];
 
+function mouseTargetVector(){
+  var orig = {x: mouseX - width/2, 
+              y: mouseY - height/2};
+  var m = mag(orig.x, orig.y);
+  orig.x = orig.x/m;
+  orig.y = orig.y/m;
+  return orig;
+}
+
+function makeFaceMaker() {
+  var eyeMaker =   makeEyeMaker();
+  var cheekMaker = makeCheekMaker();
+  var mouthMaker = makeMouthMaker();
+
+  return function(){
+    push();
+    rectMode(CENTER);
+    rect(0, 0, 170, 200); 
+    eyeMaker(mouseTargetVector());
+    cheekMaker();
+    mouthMaker();
+    pop();    
+  };
+}
+
+function makeMouthMaker(){
+  return pick([
+    function(){
+      push();
+      translate(0,40);
+      fill(color(240));
+      stroke(color(100));
+      translate(60,0);      
+      for(var i=0; i<5; i++){
+        translate(-20,0);      
+        rect(0,0,20,50);
+      }
+      pop();
+    },
+    function(){
+      push();
+      translate(0,40);
+      fill(color(150));
+      rect(0,0,30,50);
+      pop();
+    }
+
+    ]);
+}
+
+function makeCheekMaker(){
+  return pick([
+    function(){
+      push();
+      noStroke();
+      translate(40,40);
+      fill(color(240, 180, 180, 50));
+      ellipse(0,0,30,50);
+      translate(-80,0);
+      ellipse(0,0,30,50);
+      pop();
+    },
+    function(){
+    }
+    ]);
+}
+
+function makeEyeMaker(){
+
+  var cEyeGreen = color(150,255,150);
+  var cEyeBlue = color(150,200, 255);
+  var cEyeBrown = color(120,70, 70);
+
+  function drawSquareEye(c, targetVector){
+    fill(255);
+    stroke(0);
+    rect(0,0,50, 40);
+    noStroke();
+    fill(color(150,200,255));
+    rect(0, 0, 40, 30);       
+  }
+  function drawOvalEye(c, targetVector){
+    fill(255);
+    stroke(0);
+    ellipse(0,0,30, 20);
+    noStroke();
+    fill(c);
+    translate(targetVector.x*7,0);
+    ellipse(0, 0, 20, 20);       
+    fill(color(0));
+    ellipse(0, 0, 10,10);       
+  }
+  function drawMangaEye(c, targetVector){
+    
+    fill(255);
+    stroke(0);
+    ellipse(0,0,50, 70);
+    noStroke();
+    fill(c);
+    translate(targetVector.x*10,targetVector.y*10);
+    ellipse(0, 0, 40, 40);
+    fill(color(0));
+    ellipse(0, 0, 20,20);       
+  }
+
+  var eyeColor = pick([cEyeGreen, cEyeBlue, cEyeBrown]);
+  var eyeMaker = pick([drawMangaEye, drawOvalEye, drawSquareEye]);
+  
+  return pick([
+    function(targetVector){      
+      push();
+      translate(0, -30);
+      fill(color('orange'));
+      rect(0, 0, 130, 60); 
+      pop();
+    },
+    function(targetVector) {
+      push();
+      translate(0, -30);
+      fill('black');
+      rect(0, 0, 130, 60); 
+      stroke(color('white'));
+      line(-10,-30,60,30);
+      line(-15,-30,55,30);
+      pop();
+    },
+    function(targetVector) {
+      push();
+      translate(0, -40);
+      push();
+      translate(-30, 0);
+      eyeMaker(eyeColor, targetVector);
+      pop();
+      push();
+      translate(40, 0);
+      eyeMaker(eyeColor, targetVector);
+      pop();
+      pop();
+    }
+    ]);
+}
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   frameRate(30);
@@ -61,7 +203,7 @@ function restart(config) {
   var amountOfMonsters = config.monsters || 20;
   var amountOfFoodToDrop = config.food || 30;
 
-  bgColor = color(0);
+  bgColor = color(30);
   background(bgColor);
   screenLogList = [];
 
@@ -196,7 +338,8 @@ var Monster = function(config) {
   var tiredness = randBetween(0, 71);
   var boredom = randBetween(0, 60);
   var hunger = randBetween(0,50);
-  
+  var faceMaker = makeFaceMaker();
+
   var inventory = [];
   var that = this;
 
@@ -597,10 +740,17 @@ var Monster = function(config) {
       var w = 30;
       var h = 30;
 
-      noStroke();
-      rect(pos.x - w / 2, pos.y - h / 2, w, h);
       fill(255);
-      rect(pos.x-1, pos.y-1, 2, 2);
+      push();
+      translate(pos.x, pos.y);
+      scale(0.2,0.2);
+      faceMaker();
+      pop();
+
+
+      noStroke();
+      
+      fill(255);
       
       drawPowerBar(boredom, 100,
         pos.x - w / 2 - 5, pos.y - h / 2,
