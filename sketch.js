@@ -493,6 +493,7 @@ var Monster = function(config) {
   }
   var seekFood = function() {
     var foodHere = foodAt(pos);
+    movementSpeed = function() { return 10;};
     if (foodHere) {
       removeFood(foodHere);
       hunger = 0;
@@ -502,7 +503,7 @@ var Monster = function(config) {
         [FoodEffect.SICKEN, 0]]);
       switch (effect) {
         case FoodEffect.NORMAL:
-        growTiredBy(20);
+        growTiredBy(random()*20);
         changeState(State.HAPPY);
         break;
         case FoodEffect.ENDRUNKEN:
@@ -760,15 +761,15 @@ var Monster = function(config) {
       
       drawPowerBar(boredom, 100,
         pos.x - w / 2 - 5, pos.y - h / 2,
-        2, 20, color(100), color(255));
+        3, 30, color(100), color(255));
       
       drawPowerBar(tiredness, 100,
         pos.x - w / 2 - 10, pos.y - h / 2,
-        2, 20, color(50, 50, 255), color(150, 150, 255));
+        3, 30, color(50, 50, 255), color(150, 150, 255));
 
       drawPowerBar(hunger, 100,
         pos.x - w / 2 - 15, pos.y - h / 2,
-        2, 20, color('green'), color('red'));
+        3, 30, color('green'), color('red'));
 
       noStroke();
       fill(255);
