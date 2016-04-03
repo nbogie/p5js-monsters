@@ -215,7 +215,7 @@ function spawnFood(amountOfFoodToDrop){
 
 function restart(config) {
   var amountOfMonsters = config.monsters || 5;
-  var amountOfFoodToDrop = config.food || 20;
+  var amountOfFoodToDrop = config.food || 5;
 
   bgColor = color(30);
   background(bgColor);
@@ -250,36 +250,43 @@ function activateFoodWand(p){
 }
 
 function randItem() {
-  var item = pick([
-  {
+  var item = pickProb([
+  [{
     title: 'torch',
     color1: randColor(),
     color2: randColor(),
-    interactSelf: function(otherMonster) {},
-    interactOther: function(otherMonster) {}
-
-  }, {
+    interactWith: function(agent, allMonsters) {}
+  }, 0.1], [{
     title: 'ball',
     color1: randColor(),
     color2: randColor(),
-    interactOther: function(otherMonster) {
-      console.log("playing ball with other monster");
+    interactWith: function(agent, allMonsters) {
+      console.log("playing ball with self or others");
     }
-  }, {
+  }, 0.1], [{
+    title: 'whistle',
+    color1: randColor(),
+    color2: randColor(),
+    interactWith: function(agent, allMonsters) {
+      console.log("blowing whistle at all monsters!");
+      for(var m of allMonsters){
+        m.frighten(agent.getPos());
+      }
+    }
+  }, 2], [{
     title: 'foodWand',
     color1: color('purple'),
     color2: color('yellow'),
-    interactSelf: function() {
+    interactWith: function(agent, allMonsters) {
       console.log("food wand zapped!");
-
+      activateFoodWand(agent.getPos());
     }
-  }, {
+  }, 0.95], [{
     title: 'hat',
     color1: randColor(),
     color2: randColor(),
-    interactSelf: function(otherMonster) {},
-    interactOther: function(otherMonster) {}
-  }, ]);
+    interactWith: function(agent, allMonsters) {}
+  }, 0.1] ]);
   item.pos = randPos();
   return item;
 }
@@ -326,7 +333,6 @@ function removeFood(f) {
 function removeItem(i) {
   removeThing(i, items);
 }
-
 function removeThing(t, list){
   list.splice(list.indexOf(t), 1);
 }
@@ -387,6 +393,18 @@ var Monster = function(config) {
   var addItemToInventory = function(item) {
     inventory.push(item);
   };
+  var dropCurrentItem = function(){
+    if (that.hasItem()){
+      var item = inventory[0];
+      removeInventoryItem(item);
+      meLog("dropping prev item: "+ item.title);
+      item.pos = newPos(pos.x, pos.y); //todo: clone, don't alias.
+      items.push(item);
+    } 
+  };
+  var removeInventoryItem = function(i){
+    removeThing(i, inventory);
+  }
 
   this.hasItem = function() {
     return inventory.length > 0;
@@ -407,7 +425,14 @@ var Monster = function(config) {
   this.getStateName = function() {
     return stateName;
   };
-
+  
+  this.frighten = function(frightenerPos){
+    //TODO: consider what state we might be in before doing this!
+    //rather than directly and unconditionally changing state, 
+    //consider queueing a frightening event to be consumed in the stateful update loop.
+    target = makePlaceTarget(frightenerPos);
+    changeState(State.SCARED);
+  };
   
   var distToTarget = function() {
     return dist(target.pos.x, target.pos.y, pos.x, pos.y);
@@ -432,11 +457,15 @@ var Monster = function(config) {
     screenLog(that.getNickname() + ": " + msg, pos);
   }
 
-  var randomPlaceTarget = function(){
+  var makePlaceTarget = function(p){
     return {
-      pos: randPos(),
+      pos: p,
       type: TType.PLACE
     };
+  }
+  
+  var randomPlaceTarget = function(){
+    return makePlaceTarget(randPos());
   }
 
   var randomItemTargetIfAvailable = function(){
@@ -469,6 +498,11 @@ var Monster = function(config) {
 
       break;
       case State.CURIOUS:
+      if (that.hasItem() && random() > 0.1){
+        var item = inventory[0];
+        console.log("attempting to use item on self")
+        item.interactWith(that, monsters);
+      }
       target = makeNewRandomExploreTarget();
 
       meLog("curious");
@@ -480,6 +514,7 @@ var Monster = function(config) {
       break;
       case State.SCARED:
       meLog("scared!");
+      dropCurrentItem();
       break;
       case State.DRUNK:
       growTiredBy(-40);
@@ -601,12 +636,13 @@ var Monster = function(config) {
     var itemMaybe = itemAt(pos);
     if (itemMaybe) { 
       //TODO: don't always pick it up
-
-      meLog("found Item: "+ itemMaybe);
-      that.growBoredBy(-30);
-      addItemToInventory(itemMaybe)
+      if (that.hasItem()){
+        dropCurrentItem();
+      }
+      meLog("found Item: "+ itemMaybe.title);
+      that.growBoredBy(-40); 
+      addItemToInventory(itemMaybe);
       removeItem(itemMaybe);
-      state = State.HAPPY;
     }
 
     if (distToTarget() < 10) {
@@ -838,6 +874,11 @@ var Monster = function(config) {
       fill(255);
       text(stateName, pos.x + 20, pos.y);
 
+      if(that.hasItem()){
+      textSize(15);
+      fill(255);
+        text(""+inventory.map(function(i){ return i.title;}), pos.x, pos.y + 40);
+      }
       drawTarget();
     };
 
@@ -1094,8 +1135,10 @@ function drawItem(item){
     rectMode(CENTER);
     rect(item.pos.x, item.pos.y, 16, 30);
     stroke(color('red'));
+    strokeWeight(1);
     line(item.pos.x, item.pos.y-15, item.pos.x, item.pos.y+15);
     line(item.pos.x-8, item.pos.y, item.pos.x+8, item.pos.y);
+    text(item.title, item.pos.x, item.pos.y+20);
 }
 
 
@@ -1110,11 +1153,8 @@ function draw() {
     drawFood(food);
   }
 
-  for (var item of items) {
-    drawItem(item);
-  }
-
   drawPlayer();
+
 
   for (var mIx in monsters) {
     var monster = monsters[mIx];
@@ -1122,12 +1162,18 @@ function draw() {
     monster.draw();
   }
 
+  for (var item of items) {
+    drawItem(item);
+  }
+
+
   if (showDebug) {
     textSize(20);
     strokeWeight(0);
     stroke(255);
     text("player: " + round(player.pos.x) + ", " + round(player.pos.y),
       600, windowHeight - 40);
+    text("items remaining: " + items.length, 600, windowHeight - 20);
 
     textSize(20);
     drawScreenLog();    
