@@ -44,7 +44,7 @@ function makeFaceMaker() {
 }
 
 function makeMouthMaker(){
-  return pick([
+  return picker.pick([
     function(){
       push();
       translate(0,40);
@@ -69,7 +69,7 @@ function makeMouthMaker(){
 }
 
 function makeCheekMaker(){
-  return pick([
+  return picker.pick([
     function(){
       push();
       noStroke();
@@ -123,10 +123,10 @@ function makeEyeMaker(){
     ellipse(0, 0, 20,20);       
   }
 
-  var eyeColor = pick([cEyeGreen, cEyeBlue, cEyeBrown]);
-  var eyeMaker = pick([drawMangaEye, drawOvalEye, drawSquareEye]);
+  var eyeColor = picker.pick([cEyeGreen, cEyeBlue, cEyeBrown]);
+  var eyeMaker = picker.pick([drawMangaEye, drawOvalEye, drawSquareEye]);
   
-  return pick([
+  return picker.pick([
     function(targetVector){      
       push();
       translate(0, -30);
@@ -192,7 +192,7 @@ function drawScreenLog(){
 
 function makeFoodAt(p){
   return {pos: p, 
-          c: pick([
+          c: picker.pick([
             randomColor({hue: 'green'}), 
             randomColor({hue: 'red'}) ])
           };  
@@ -255,7 +255,7 @@ function activateFoodWand(p){
 }
 
 function randItem() {
-  var item = pickProb([
+  var item = picker.pickProb([
   [{
     title: 'torch',
     color1: randColor(),
@@ -475,7 +475,7 @@ var Monster = function(config) {
 
   var randomItemTargetIfAvailable = function(){
     if (items.length > 0){
-      var item = pick(items);
+      var item = picker.pick(items);
       return {
         pos: item.pos, 
         type: TType.ITEM
@@ -486,7 +486,7 @@ var Monster = function(config) {
   }
 
   var makeNewRandomExploreTarget = function(){
-    return pick([randomPlaceTarget, randomItemTargetIfAvailable])();
+    return picker.pick([randomPlaceTarget, randomItemTargetIfAvailable])();
   };
 
   var changeState = function(next) {
@@ -581,7 +581,7 @@ var Monster = function(config) {
 
     if (foodPositions.length > 0) {
       target = {
-        pos: pick(foodPositions).pos,
+        pos: picker.pick(foodPositions).pos,
         type: TType.FOOD
       };
     }
@@ -598,7 +598,7 @@ var Monster = function(config) {
       removeFood(foodHere);
       hunger = 0;
       meLog("ate food so hunger now: "+ hunger);
-      var effect = pickProb([[FoodEffect.NORMAL, 95], 
+      var effect = picker.pickProb([[FoodEffect.NORMAL, 95], 
         [FoodEffect.ENDRUNKEN, 5], 
         [FoodEffect.SICKEN, 0]]);
       switch (effect) {
@@ -935,48 +935,50 @@ function mousePosAsInts(){
 
 function mouseReleased() {}
 
-function pickProb(arr){
-  var sum = arr.reduce(function(a, b) {
-    return a + b[1];
-  }, 0);
-  arr = arr.map(function(v){ return [v[0], v[1]/sum]; });
+var picker = (function() {
+  return { 
+    pickProb: function(arr){
+      var sum = arr.reduce(function(a, b) {
+        return a + b[1];
+      }, 0);
+      arr = arr.map(function(v){ return [v[0], v[1]/sum]; });
 
-  var fArr = [];
-  var rt = 0;
+      var fArr = [];
+      var rt = 0;
 
-  for(var pair of arr){
-    rt += pair[1];
-    fArr.push([pair[0], rt]);
-  }
-  var rnd = random();
-  for(var resAndThresh of fArr){
-    if (rnd < resAndThresh[1]){
-      return resAndThresh[0];
+      for(var pair of arr){
+        rt += pair[1];
+        fArr.push([pair[0], rt]);
+      }
+      var rnd = random();
+      for(var resAndThresh of fArr){
+        if (rnd < resAndThresh[1]){
+          return resAndThresh[0];
+        }
+      }
+    },
+    pickIx: function(arr) {
+      return floor(random() * arr.length);
+    },
+    pick: function(arr) {
+      return arr[floor(random() * arr.length)];
+    },
+
+    pickOther: function(arr, notThisOne) {
+      //TODO: handle case when array ONLY contains references to the one we don't want.  (Infinite loop.)
+      var ix = arr.indexOf(notThisOne);
+      if (ix === -1) {
+        return arr[floor(random() * arr.length)];
+      } else {
+        var chosenIx = floor(random() * arr.length);
+        while (chosenIx === ix) {
+          chosenIx = floor(random() * arr.length);
+        }
+        return arr[chosenIx];
+      }
     }
   }
-}
-
-function pickIx(arr) {
-  return floor(random() * arr.length);
-}
-
-function pick(arr) {
-  return arr[floor(random() * arr.length)];
-}
-
-function pickOther(arr, notThisOne) {
-  //TODO: handle case when array ONLY contains references to the one we don't want.  (Infinite loop.)
-  var ix = arr.indexOf(notThisOne);
-  if (ix === -1) {
-    return arr[floor(random() * arr.length)];
-  } else {
-    var chosenIx = floor(random() * arr.length);
-    while (chosenIx === ix) {
-      chosenIx = floor(random() * arr.length);
-    }
-    return arr[chosenIx];
-  }
-}
+})();
 
 function randColor() {
   var randomColorLibraryAvailable = true;
@@ -984,7 +986,7 @@ function randColor() {
   return randomColor(); // uses randomColor library.
   } else {
     if (random() > 0.5) {
-      return pick([color('orange'),
+      return picker.pick([color('orange'),
         color('yellow'),
         color('red'),
         color('white'),
