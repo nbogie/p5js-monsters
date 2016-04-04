@@ -13,8 +13,13 @@ function mouseTargetVector(){
   var orig = {x: mouseX - width/2, 
               y: mouseY - height/2};
   var m = mag(orig.x, orig.y);
-  orig.x = orig.x/m;
-  orig.y = orig.y/m;
+  if (m === 0){
+    orig.x = 0;
+    orig.y = 0;
+  } else {
+    orig.x = orig.x/m;
+    orig.y = orig.y/m;
+  }
   return orig;
 }
 
@@ -216,7 +221,7 @@ function spawnFood(amountOfFoodToDrop){
 function restart(config) {
   var amountOfMonsters = config.monsters || 5;
   var amountOfFoodToDrop = config.food || 5;
-
+  var amountOfItems = config.items || 10;
   bgColor = color(30);
   background(bgColor);
   screenLogList = [];
@@ -227,7 +232,7 @@ function restart(config) {
 
   spawnFood(amountOfFoodToDrop);
   items = [];
-  for (var k = 0; k < 10; k++) {
+  for (var k = 0; k < amountOfItems; k++) {
     items.push(randItem());
   }
 
@@ -555,11 +560,16 @@ var Monster = function(config) {
     var dx = target.pos.x - pos.x;
     var dy = target.pos.y - pos.y;
     var m = mag(dx, dy);
-    var vel = mult(newPos(dx / m, dy / m), stepSize);
-    pos.x += vel.x;
-    pos.y += vel.y;
-    pos.x = constrain(pos.x, 20, width - 20);
-    pos.y = constrain(pos.y, 20, height - 20);
+    if(m > 0.5){  //not arrived yet...
+      var vel = mult(newPos(dx / m, dy / m), stepSize);
+      pos.x += vel.x;
+      pos.y += vel.y;
+      pos.x = constrain(pos.x, 20, width - 20);
+      pos.y = constrain(pos.y, 20, height - 20);
+    }
+    if (isNaN(pos.x) || isNaN(pos.y)){
+      throw "position is bad in moveTowardsTarget()";
+    }
   };
 
   
